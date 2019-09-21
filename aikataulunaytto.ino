@@ -1,5 +1,7 @@
 #include <GxEPD.h>
-#include <GxGDE0213B1/GxGDE0213B1.h>
+#include <GxGDE0213B1/GxGDE0213B1.h>     // Vanhempi Waveshare-näyttö
+//#include <GxGDEH0213B72/GxGDEH0213B72.h> // LOLIN (WEMOS) -näyttö, pidempi piirikortti
+//#include <GxGDEH0213B73/GxGDEH0213B73.h> // Waveshare V2, ongelmia D1 Minin kanssa
 #include <GxIO/GxIO_SPI/GxIO_SPI.h>
 #include <GxIO/GxIO.h>
 #include <Fonts/FreeMono9pt7b.h>
