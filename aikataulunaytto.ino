@@ -15,7 +15,7 @@ GxIO_Class io(SPI, SS, D3, D4);
 GxEPD_Class display(io);
 
 // Määritä nukkumisen kesto, oletuksena 900 s eli 15 min
-#define SLEEP_SECONDS 90
+#define SLEEP_SECONDS 900
 
 // HSL:n pysäkki-id:t voi hakea menemällä osoitteeseen
 // https://www.hsl.fi/reitit-ja-aikataulut,
