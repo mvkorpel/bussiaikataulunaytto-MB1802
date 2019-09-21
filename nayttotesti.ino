@@ -1,7 +1,7 @@
 #include <GxEPD.h>
-#include <GxGDE0213B1/GxGDE0213B1.cpp>
-#include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
-#include <GxIO/GxIO.cpp>
+#include <GxGDE0213B1/GxGDE0213B1.h>
+#include <GxIO/GxIO_SPI/GxIO_SPI.h>
+#include <GxIO/GxIO.h>
 
 GxIO_Class io(SPI, SS, D3, D4); // Alusta SPI-väylä
 GxEPD_Class display(io); // Adafruit GFX -yhteensopiva luokka

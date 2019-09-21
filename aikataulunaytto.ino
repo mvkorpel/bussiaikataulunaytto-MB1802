@@ -1,12 +1,12 @@
-#include <time.h>
-#include <ESP8266HTTPClient.h>
-#include <ESP8266WiFi.h>
-#include <ArduinoJSON.h>
 #include <GxEPD.h>
-#include <GxGDE0213B1/GxGDE0213B1.cpp>
-#include <GxIO/GxIO_SPI/GxIO_SPI.cpp>
-#include <GxIO/GxIO.cpp>
+#include <GxGDE0213B1/GxGDE0213B1.h>
+#include <GxIO/GxIO_SPI/GxIO_SPI.h>
+#include <GxIO/GxIO.h>
 #include <Fonts/FreeMono9pt7b.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
+#include <ArduinoJson.h>
+#include <time.h>
 
 // E-paperinäytön alustaminen
 GxIO_Class io(SPI, SS, D3, D4);
@@ -96,11 +96,12 @@ void setup()
     http.end();
 
     // Parsitaan vastaus helpomminkäsiteltävään muotoon
-    DynamicJsonBuffer jsonBuffer(bufferSize);
-    JsonObject &root = jsonBuffer.parseObject(payload.c_str());
+    DynamicJsonDocument jsonDoc(bufferSize);
+    deserializeJson(jsonDoc, payload.c_str());
+    JsonObject root = jsonDoc.as<JsonObject>();
 
     // otetaan referenssi JSON-muotoisen vastauksen bussilähdöistä 'departures'
-    JsonArray &departures = root["data"]["stops"][0]["stoptimesWithoutPatterns"];
+    JsonArray departures = root["data"]["stops"][0]["stoptimesWithoutPatterns"];
 
     // Hyödylliset rivit debuggaukseen:
     // if (!root.success()) {
@@ -115,7 +116,7 @@ void setup()
     // Käydään kaikki bussilähdöt yksitellen läpi.
     // Jokainen bussilähtö piirretään e-paperinäytön puskuriin.
     int idx = 0;
-    for (auto &dep : departures)
+    for (auto dep : departures)
     {
         int departureTime = dep["realtimeDeparture"]; // lähtöaika
         String departure = parseTime(departureTime);  // parsittu lähtöaika
