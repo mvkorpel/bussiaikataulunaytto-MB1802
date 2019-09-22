@@ -55,7 +55,7 @@ String parseTime(int seconds) {
     */
     int hours = seconds / 3600;
     int minutes = (seconds % 3600) / 60;
-    char buffer[5];
+    char buffer[6];
     if (hours == 25)
         hours = 0;
     sprintf(buffer, "%02d:%02d", hours, minutes);
