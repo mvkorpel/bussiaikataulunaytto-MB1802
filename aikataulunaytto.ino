@@ -17,6 +17,9 @@ GxEPD_Class display(io);
 // Määritä nukkumisen kesto, oletuksena 900 s eli 15 min
 #define SLEEP_SECONDS 900
 
+// Langattoman verkon lähetysteho (dBm), 0-20.5.
+#define WIFI_POWER 7
+
 // HSL:n pysäkki-id:t voi hakea menemällä osoitteeseen
 // https://www.hsl.fi/reitit-ja-aikataulut,
 // kirjoittamalla pysäkkihakuun pysäkin nimen, ja
@@ -66,7 +69,15 @@ void setup()
 {
     Serial.begin(115200);
 
-    WiFi.begin("Wifi-verkkoni", "salasana");
+    // Ei tallenneta WiFi-asetuksia pysyvään muistiin. Vähentää
+    // muistin kulumista.
+    WiFi.persistent(false);
+
+    // Tehon säätö säästää akkua
+    WiFi.setOutputPower(WIFI_POWER);
+
+    // Asetetaan station-tila (asiakas). Lienee myös vakioasetus.
+    WiFi.mode(WIFI_STA);
 
     // Voit myös asettaa itsellesi staattisen IP:n
     // säästääksesi akkua. Tämä lyhentää Wifi-verkkoon yhdistämistä
@@ -74,7 +85,13 @@ void setup()
     //IPAddress ip(192,168,1,50);
     //IPAddress gateway(192,168,1,1);
     //IPAddress subnet(255,255,255,0);
-    //WiFi.config(ip, gateway, subnet);
+    //IPAddress dns2(8,8,8,8);
+    // Neljäs ja viides argumentti ovat DNS-palvelimia.
+    // Tässä nimipalvelin on reitittimessä. dns2 on Googlen nimipalvelu.
+    //WiFi.config(ip, gateway, subnet, gateway, dns2);
+    // Asetetaan laitteelle selkonimi. Ei pakollinen säätö.
+    WiFi.hostname("bussitaulu");
+    WiFi.begin("Wifi-verkkoni", "salasana");
 
     // Yhdistetään langattomaan verkkoon
     while (WiFi.status() != WL_CONNECTED)
