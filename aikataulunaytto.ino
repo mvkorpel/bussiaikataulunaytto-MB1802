@@ -76,7 +76,7 @@ void setup()
     // Tehon säätö säästää akkua
     WiFi.setOutputPower(WIFI_POWER);
 
-    // Asetetaan station-tila (asiakas). Lienee myös vakioasetus.
+    // Asetetaan station-tila (asiakas)
     WiFi.mode(WIFI_STA);
 
     // Voit myös asettaa itsellesi staattisen IP:n
