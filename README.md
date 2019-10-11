@@ -26,6 +26,5 @@ Kotelon 3D-malleja voit tarkastella (ja muokata ottamalla itsellesi kopion) [OnS
 2. Avaa **Preferences (Asetukset)** ja lisää osoite *http://arduino.esp8266.com/stable/package_esp8266com_index.json* kenttään *Additional Board Manager URLs*
 3. Avaa **Tools > Board** -valikosta *Boards Manager* ja asenna paketti *esp8266*
 4. Ota Wemos D1 Mini kohdealustaksi valikosta **Tools > Board**
-5. Asenna tarvittavat kirjastot (ArduinoJSON ja Adafruit GFX) *Library Managerilla*. Sen löydät valikosta **Sketch > Include Library > Manage Libraries...**
-6. Asenna GxEPD [täältä](https://github.com/ZinggJM/GxEPD) lataamalla se, ja tuomalla se zip-tiedostosta. Se onnistuu valikosta **Sketch > Include Library > Add .ZIP Library...**
-7. Muokkaa koodia (ainakin Wifi-tunnuksesi!) ja ohjelmoi se Wemokseen upload-nappia painamalla!
+5. Asenna tarvittavat kirjastot (ArduinoJson, Adafruit GFX ja GxEPD) *Library Managerilla*. Sen löydät valikosta **Sketch > Include Library > Manage Libraries...**
+6. Muokkaa koodia (ainakin Wifi-tunnuksesi!) ja ohjelmoi se Wemokseen upload-nappia painamalla!
