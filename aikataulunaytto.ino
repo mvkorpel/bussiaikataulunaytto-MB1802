@@ -9,6 +9,7 @@
 #include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
 #include <time.h>
+#include <ezTime.h>
 
 // E-paperinäytön alustaminen
 GxIO_Class io(SPI, SS, D3, D4);
@@ -31,13 +32,39 @@ GxEPD_Class display(io);
 // https://goo.gl/cwAC1H löytyvää kyselyä.
 
 // GraphQL-pyyntö Digitransitin rajapintaan. Kokeile rajapintaa täällä: goo.gl/cwAC1H
-static const char digitransitQuery[] PROGMEM = "{\"query\":\"{stops(ids:[\\\"HSL:2215255\\\"]){name,stoptimesWithoutPatterns(numberOfDepartures:17){realtimeDeparture,realtime,trip{route{shortName}}}}}\"}";
+static const char digitransitQuery[] PROGMEM = "{\"query\":\"{stops(ids:[\\\"HSL:2215255\\\"]){stoptimesWithoutPatterns(numberOfDepartures:17){realtimeDeparture,realtime,serviceDay,trip{route{shortName}}}}}\"}";
 
 // ArduinoJSON-puskurin koko. Ks. https://arduinojson.org/assistant/
-// Puskurin on oltava suurempi kuin oletettu JSON-vastaus rajapinnasta.
-const size_t bufferSize = JSON_ARRAY_SIZE(1) + JSON_ARRAY_SIZE(16) + 32 * JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(2) + 15 * JSON_OBJECT_SIZE(3) + 1140;
+// Puskurin on oltava suurempi kuin oletettu JSON-vastaus
+// rajapinnasta. Alla olevalla laskutoimituksella saadaan 3238 tavua
+// (3240 neljällä jaollisena). Tilaa on varattu reilusti.
+// Linjanumeroiden vaatima tila on arvioitu yläkanttiin: viisi merkkiä
+// jokaiselle. Merkkijonojen kopiointiin varattu tila on assistentin
+// (ArduinoJson 6) ilmoittamista luvuista suurempi, esimerkkikoodista
+// "Parsing program" otettu 1270; pienempi luku on 1141.
+const size_t bufferSize = JSON_ARRAY_SIZE(1) + JSON_ARRAY_SIZE(17) + 37 * JSON_OBJECT_SIZE(1) + 17 * JSON_OBJECT_SIZE(4) + 1270;
 
-void printTimetableRow(String busName, String departure, bool isRealtime, int idx) {
+// Kirjoittaa "hh:mm"-muotoisen, annettua aikaa esittävän merkkijonon
+// taulukkoon 'x'. Merkeistä ':' ja lopun '\0' ovat jo valmiiksi
+// paikoillaan. Yhden käyttötarkoituksen s(n)printf-korvike. Tällä
+// ainakin helposti varmistutaan, että muutetaan vain juuri tunneille
+// ja minuuteille varattuja merkkejä.
+void formatTime(char *x, uint8_t h, uint8_t m)
+{
+    uint8_t digit;
+
+    digit = h / 10;
+    x[0] = '0' + digit;
+    digit = h - digit * 10;
+    x[1] = '0' + digit;
+
+    digit = m / 10;
+    x[3] = '0' + digit;
+    digit = m - digit * 10;
+    x[4] = '0' + digit;
+}
+
+void printTimetableRow(const char *busName, const char *departure, bool isRealtime, int idx) {
     /* Funktio tulostaa näytön puskuriin bussiaikataulurivin. Esim.
        110T  21:34~
     */
@@ -50,19 +77,6 @@ void printTimetableRow(String busName, String departure, bool isRealtime, int id
         display.setCursor(108, 2 + idx * 14);
         display.print("~");
     }
-}
-
-String parseTime(int seconds) {
-    /* Funktio parsii Digitransitin sekuntimuotoisesta lähtöajasta
-       merkkijonon. Esimerkiksi 78840 -> "21:54" 
-    */
-    int hours = seconds / 3600;
-    int minutes = (seconds % 3600) / 60;
-    char buffer[6];
-    if (hours == 25)
-        hours = 0;
-    sprintf(buffer, "%02d:%02d", hours, minutes);
-    return buffer;
 }
 
 void setup()
@@ -100,6 +114,25 @@ void setup()
         delay(250);
     }
 
+    // Tarkistetaan kello. Kelloa käytetään aikavyöhykeasetusten
+    // riittävän tuoreuden toteamiseksi (välttämätöntä, kun
+    // aikavyöhyketietoa käytetään). Tiheäkään kyselyväli ei haittaa,
+    // jos käytetään omaa palvelinta, mitä varten voit poistaa
+    // seuraavan rivin kommenttimerkit ja asettaa NTP-palvelimelle
+    // oikean nimen.
+    //setServer("oma_palvelin");
+    waitForSync();
+
+    // Aikavyöhykkeen ominaisuudet haetaan mikrokontrollerin pysyvästä
+    // muistista. Jos tieto kuitenkin on vanhaa, aikavyöhykedata
+    // ladataan uudestaan ezTime-kirjaston kehittäjän palvelimelta.
+    Timezone Finland;
+    if (!Finland.setCache(0))
+    {
+        Serial.println("getting TZ info");
+        Finland.setLocation("Europe/Helsinki");
+    }
+
     /* Seuraavilla riveillä luodaan ja lähetetään HTTP-pyyntö Digitransitin rajapintaan */
 
     HTTPClient http; // Alustetaan HTTP-Client -instanssi
@@ -132,16 +165,28 @@ void setup()
     display.setTextColor(GxEPD_BLACK);
     display.setFont(&FreeMono9pt7b);
 
+    char clockHhMm[6];
+    clockHhMm[2] = ':';
+    clockHhMm[5] = '\0';
     // Käydään kaikki bussilähdöt yksitellen läpi.
     // Jokainen bussilähtö piirretään e-paperinäytön puskuriin.
     int idx = 0;
     for (auto dep : departures)
     {
-        int departureTime = dep["realtimeDeparture"]; // lähtöaika
-        String departure = parseTime(departureTime);  // parsittu lähtöaika
-        bool realTime = dep["realtime"]; // onko lähtö tarkka (käyttääkö HSL:n GPS-seurantaa?)
-        String busName = dep["trip"]["route"]["shortName"]; // Bussin reittinumero
-        printTimetableRow(busName, departure, realTime, ++idx); // tulostetaan rivi näytölle oikeaan kohtaan
+        // Lähtöaika (sekunteja vuorokauden alusta). Tämä ei käänny
+        // suoraan kellonajaksi päivinä, jolloin kelloa siirretään.
+        int departureTime = dep["realtimeDeparture"];
+        // Lasketaan lähtöaika Unix-aikaleimana
+        time_t timeStamp = (time_t) dep["serviceDay"] + departureTime;
+        // Parsittu lähtöaika
+        uint8_t localHours = Finland.hour(timeStamp, UTC_TIME);
+        uint8_t localMinutes = Finland.minute(timeStamp, UTC_TIME);
+        formatTime(clockHhMm, localHours, localMinutes);
+        // Onko lähtö tarkka (käyttääkö HSL:n GPS-seurantaa?)
+        bool realTime = dep["realtime"];
+        // Bussin reittinumero
+        const char *busName = dep["trip"]["route"]["shortName"]; // Bussin reittinumero
+        printTimetableRow(busName, clockHhMm, realTime, ++idx); // tulostetaan rivi näytölle oikeaan kohtaan
     }
 
     display.update(); // Piirrä näyttöpuskurin sisältö E-paperinäytölle
