@@ -155,6 +155,12 @@ void setup()
     String payload = http.getString();                  // Otetaan Digitransitin lähettämä vastaus talteen muuttujaan 'payload'
     http.end();
 
+    // WiFi pois päältä
+    WiFi.disconnect();
+    WiFi.mode(WIFI_OFF);
+    WiFi.forceSleepBegin();
+    yield();
+
     // Parsitaan vastaus helpomminkäsiteltävään muotoon
     DynamicJsonDocument jsonDoc(bufferSize);
     deserializeJson(jsonDoc, payload.c_str());
