@@ -21,6 +21,13 @@ GxEPD_Class display(io);
 // Langattoman verkon lähetysteho (dBm), 0-20.5.
 #define WIFI_POWER 7
 
+// Rivin korkeus (päällekkäisten rivien väli) E-paperinäytöllä
+// (pikseleitä)
+#define LINE_HEIGHT 14
+
+// Näytön yläreunan marginaali
+#define TOP_MARGIN 6
+
 // HSL:n pysäkki-id:t voi hakea menemällä osoitteeseen
 // https://www.hsl.fi/reitit-ja-aikataulut,
 // kirjoittamalla pysäkkihakuun pysäkin nimen, ja
@@ -65,18 +72,19 @@ void formatTime(char *x, uint8_t h, uint8_t m)
 }
 
 void printTimetableRow(const char *busName, const char *departure, bool isRealtime, int idx) {
-    /* Funktio tulostaa näytön puskuriin bussiaikataulurivin. Esim.
-       110T  21:34~
-    */
-    display.setCursor(2, 2 + idx * 14);
+    // Funktio tulostaa näytön puskuriin bussiaikataulurivin. Esim.
+    // 110T ~21:34
+    // Tilde näytetään, jos aika on otettu aikataulusta eli ei ole
+    // reaaliaikainen arvio.
+    display.setCursor(0, TOP_MARGIN + idx * LINE_HEIGHT);
     display.print(busName);
-    display.setCursor(54, 2 + idx * 14);
-    display.print(departure);
-    if (isRealtime)
+    if (!isRealtime)
     {
-        display.setCursor(108, 2 + idx * 14);
+        display.setCursor(55, TOP_MARGIN + idx * LINE_HEIGHT);
         display.print("~");
     }
+    display.setCursor(66, TOP_MARGIN + idx * LINE_HEIGHT);
+    display.print(departure);
 }
 
 void setup()
