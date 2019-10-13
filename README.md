@@ -23,7 +23,7 @@ Kotelon 3D-malleja voit tarkastella (ja muokata ottamalla itsellesi kopion) [OnS
 ## Asennus ja käyttöönotto
 
 1. Asenna Arduino IDE (versio 1.8 tai uudempi)
-2. Avaa **Preferences (Asetukset)** ja lisää osoite *http://arduino.esp8266.com/stable/package_esp8266com_index.json* kenttään *Additional Board Manager URLs*
+2. Avaa **Preferences (Asetukset)** ja lisää osoite *https://arduino.esp8266.com/stable/package_esp8266com_index.json* kenttään *Additional Board Manager URLs*
 3. Avaa **Tools > Board** -valikosta *Boards Manager* ja asenna paketti *esp8266*
 4. Ota Wemos D1 Mini kohdealustaksi valikosta **Tools > Board**
 5. Asenna tarvittavat kirjastot (ArduinoJson, ezTime, Adafruit GFX ja GxEPD) *Library Managerilla*. Sen löydät valikosta **Sketch > Include Library > Manage Libraries...**
