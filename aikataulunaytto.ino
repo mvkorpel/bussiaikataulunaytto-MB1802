@@ -28,6 +28,11 @@ GxEPD_Class display(io);
 // Näytön yläreunan marginaali
 #define TOP_MARGIN 6
 
+// Näytön yläreunan marginaali kellonajalle. Jos pienempi kuin
+// TOP_MARGIN, kellon ja muiden rivien väliin jää tavallisia
+// rivivälejä suurempi rako.
+#define CLOCK_MARGIN 0
+
 // HSL:n pysäkki-id:t voi hakea menemällä osoitteeseen
 // https://www.hsl.fi/reitit-ja-aikataulut,
 // kirjoittamalla pysäkkihakuun pysäkin nimen, ja
@@ -39,17 +44,17 @@ GxEPD_Class display(io);
 // https://goo.gl/cwAC1H löytyvää kyselyä.
 
 // GraphQL-pyyntö Digitransitin rajapintaan. Kokeile rajapintaa täällä: goo.gl/cwAC1H
-static const char digitransitQuery[] PROGMEM = "{\"query\":\"{stops(ids:[\\\"HSL:2215255\\\"]){stoptimesWithoutPatterns(numberOfDepartures:17){realtimeDeparture,realtime,serviceDay,trip{route{shortName}}}}}\"}";
+static const char digitransitQuery[] PROGMEM = "{\"query\":\"{stops(ids:[\\\"HSL:2215255\\\"]){stoptimesWithoutPatterns(numberOfDepartures:16){realtimeDeparture,realtime,serviceDay,trip{route{shortName}}}}}\"}";
 
 // ArduinoJSON-puskurin koko. Ks. https://arduinojson.org/assistant/
 // Puskurin on oltava suurempi kuin oletettu JSON-vastaus
-// rajapinnasta. Alla olevalla laskutoimituksella saadaan 3238 tavua
-// (3240 neljällä jaollisena). Tilaa on varattu reilusti.
+// rajapinnasta. Alla olevalla laskutoimituksella saadaan 3056 tavua.
+// Tilaa on varattu reilusti.
 // Linjanumeroiden vaatima tila on arvioitu yläkanttiin: viisi merkkiä
 // jokaiselle. Merkkijonojen kopiointiin varattu tila on assistentin
 // (ArduinoJson 6) ilmoittamista luvuista suurempi, esimerkkikoodista
-// "Parsing program" otettu 1270; pienempi luku on 1141.
-const size_t bufferSize = JSON_ARRAY_SIZE(1) + JSON_ARRAY_SIZE(17) + 37 * JSON_OBJECT_SIZE(1) + 17 * JSON_OBJECT_SIZE(4) + 1270;
+// "Parsing program" otettu 1200; pienempi luku on 1076.
+const size_t bufferSize = JSON_ARRAY_SIZE(1) + JSON_ARRAY_SIZE(16) + 35 * JSON_OBJECT_SIZE(1) + 16 * JSON_OBJECT_SIZE(4) + 1200;
 
 // Kirjoittaa "hh:mm"-muotoisen, annettua aikaa esittävän merkkijonon
 // taulukkoon 'x'. Merkeistä ':' ja lopun '\0' ovat jo valmiiksi
@@ -69,6 +74,16 @@ void formatTime(char *x, uint8_t h, uint8_t m)
     x[3] = '0' + digit;
     digit = m - digit * 10;
     x[4] = '0' + digit;
+}
+
+// Tulostaa kellonajan ('text') keskelle yläriviä.  Tekstin ympärille
+// tulee pieni "kehys".
+void printClockRow(const char *text)
+{
+    display.setCursor(11, CLOCK_MARGIN + LINE_HEIGHT);
+    display.print("= ");
+    display.print(text);
+    display.print(" =");
 }
 
 void printTimetableRow(const char *busName, const char *departure, bool isRealtime, int idx) {
@@ -151,6 +166,7 @@ void setup()
     //http.begin("http://api.digitransit.fi/routing/v1/routers/finland/index/graphql"); // <- koko Suomi
 
     http.addHeader("Content-Type", "application/json"); // Rajapinta vaatii pyynnön JSON-pakettina
+    time_t queryTime = UTC.now();                       // Kyselyaika muistiin
     int httpCode = http.POST(digitransitQuery);         // POST-muotoinen pyyntö
     String payload = http.getString();                  // Otetaan Digitransitin lähettämä vastaus talteen muuttujaan 'payload'
     http.end();
@@ -179,9 +195,17 @@ void setup()
     display.setTextColor(GxEPD_BLACK);
     display.setFont(&FreeMono9pt7b);
 
+    uint8_t localHours, localMinutes;
     char clockHhMm[6];
     clockHhMm[2] = ':';
     clockHhMm[5] = '\0';
+    localHours = Finland.hour(queryTime, UTC_TIME);
+    localMinutes = Finland.minute(queryTime, UTC_TIME);
+    formatTime(clockHhMm, localHours, localMinutes);
+    Serial.println(clockHhMm);
+    // Kirjoitetaan aikataulun päivitysaika keskelle
+    // yläriviä. Esimerkki: = 12:34 =
+    printClockRow(clockHhMm);
     // Käydään kaikki bussilähdöt yksitellen läpi.
     // Jokainen bussilähtö piirretään e-paperinäytön puskuriin.
     int idx = 0;
@@ -193,14 +217,14 @@ void setup()
         // Lasketaan lähtöaika Unix-aikaleimana
         time_t timeStamp = (time_t) dep["serviceDay"] + departureTime;
         // Parsittu lähtöaika
-        uint8_t localHours = Finland.hour(timeStamp, UTC_TIME);
-        uint8_t localMinutes = Finland.minute(timeStamp, UTC_TIME);
+        localHours = Finland.hour(timeStamp, UTC_TIME);
+        localMinutes = Finland.minute(timeStamp, UTC_TIME);
         formatTime(clockHhMm, localHours, localMinutes);
         // Onko lähtö tarkka (käyttääkö HSL:n GPS-seurantaa?)
         bool realTime = dep["realtime"];
         // Bussin reittinumero
         const char *busName = dep["trip"]["route"]["shortName"]; // Bussin reittinumero
-        printTimetableRow(busName, clockHhMm, realTime, ++idx); // tulostetaan rivi näytölle oikeaan kohtaan
+        printTimetableRow(busName, clockHhMm, realTime, ++idx + 1); // tulostetaan rivi näytölle oikeaan kohtaan
     }
 
     display.update(); // Piirrä näyttöpuskurin sisältö E-paperinäytölle
