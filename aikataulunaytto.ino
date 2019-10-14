@@ -179,7 +179,7 @@ void setup()
 
     // Parsitaan vastaus helpomminkäsiteltävään muotoon
     DynamicJsonDocument jsonDoc(bufferSize);
-    deserializeJson(jsonDoc, payload.c_str());
+    DeserializationError err = deserializeJson(jsonDoc, payload.c_str());
     JsonObject root = jsonDoc.as<JsonObject>();
 
     // otetaan referenssi JSON-muotoisen vastauksen bussilähdöistä 'departures'
@@ -195,39 +195,70 @@ void setup()
     display.setTextColor(GxEPD_BLACK);
     display.setFont(&FreeMono9pt7b);
 
+    int departureTime;
+    time_t timeStamp[16];
+    bool realTime[16];
+    const char *busName[16];
+    int k, nRows;
     uint8_t localHours, localMinutes;
     char clockHhMm[6];
     clockHhMm[2] = ':';
     clockHhMm[5] = '\0';
-    localHours = Finland.hour(queryTime, UTC_TIME);
-    localMinutes = Finland.minute(queryTime, UTC_TIME);
-    formatTime(clockHhMm, localHours, localMinutes);
-    Serial.println(clockHhMm);
-    // Kirjoitetaan aikataulun päivitysaika keskelle
-    // yläriviä. Esimerkki: = 12:34 =
-    printClockRow(clockHhMm);
-    // Käydään kaikki bussilähdöt yksitellen läpi.
-    // Jokainen bussilähtö piirretään e-paperinäytön puskuriin.
+    // Tallennetaan tiedot kaikista lähdöistä
     int idx = 0;
     for (auto dep : departures)
     {
         // Lähtöaika (sekunteja vuorokauden alusta). Tämä ei käänny
         // suoraan kellonajaksi päivinä, jolloin kelloa siirretään.
-        int departureTime = dep["realtimeDeparture"];
+        departureTime = dep["realtimeDeparture"];
         // Lasketaan lähtöaika Unix-aikaleimana
-        time_t timeStamp = (time_t) dep["serviceDay"] + departureTime;
-        // Parsittu lähtöaika
-        localHours = Finland.hour(timeStamp, UTC_TIME);
-        localMinutes = Finland.minute(timeStamp, UTC_TIME);
-        formatTime(clockHhMm, localHours, localMinutes);
+        timeStamp[idx] = (time_t) dep["serviceDay"] + departureTime;
         // Onko lähtö tarkka (käyttääkö HSL:n GPS-seurantaa?)
-        bool realTime = dep["realtime"];
+        realTime[idx] = dep["realtime"];
         // Bussin reittinumero
-        const char *busName = dep["trip"]["route"]["shortName"]; // Bussin reittinumero
-        printTimetableRow(busName, clockHhMm, realTime, ++idx + 1); // tulostetaan rivi näytölle oikeaan kohtaan
+        busName[idx] = dep["trip"]["route"]["shortName"]; // Bussin reittinumero
+        idx++;
     }
+    nRows = idx;
 
-    display.update(); // Piirrä näyttöpuskurin sisältö E-paperinäytölle
+    localHours = Finland.hour(queryTime, UTC_TIME);
+    localMinutes = Finland.minute(queryTime, UTC_TIME);
+    formatTime(clockHhMm, localHours, localMinutes);
+    Serial.println(clockHhMm);
+    if (nRows > 0)
+    {
+        // Alustetaan E-paperinäyttö
+        display.init();
+        display.setTextColor(GxEPD_BLACK);
+        display.setFont(&FreeMono9pt7b);
+        // Kirjoitetaan aikataulun päivitysaika keskelle
+        // yläriviä. Esimerkki: = 12:34 =
+        printClockRow(clockHhMm);
+        // Käydään kaikki bussilähdöt yksitellen läpi. Jokainen bussilähtö
+        // piirretään e-paperinäytön puskuriin.  Aloitetaan kakkosriviltä.
+        for (k = 0; k < nRows; k++)
+        {
+            // Parsittu lähtöaika
+            localHours = Finland.hour(timeStamp[k], UTC_TIME);
+            localMinutes = Finland.minute(timeStamp[k], UTC_TIME);
+            formatTime(clockHhMm, localHours, localMinutes);
+            // Tulostetaan rivi näytölle oikeaan kohtaan
+            printTimetableRow(busName[k], clockHhMm, realTime[k], k + 2);
+        }
+        display.update(); // Piirrä näyttöpuskurin sisältö E-paperinäytölle
+    }
+    else
+    {
+        // Jos virhe, jätetään mahdollinen aiempi aikataulu näytölle,
+        // mutta lähetetään tietoa virheestä sarjaporttiin
+        Serial.print("http code ");
+        Serial.println(httpCode);
+        if (err)
+        {
+            Serial.print(F("deserializeJson() failed with code "));
+            Serial.println(err.c_str());
+        }
+    }
 
     // Komennetaan ESP8266 syväunitilaan.
     // Herättyään koodi suoritetaan setup()-funktion alusta
