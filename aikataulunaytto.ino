@@ -18,6 +18,13 @@ GxEPD_Class display(io);
 // Määritä nukkumisen kesto, oletuksena 900 s eli 15 min
 #define SLEEP_SECONDS 900
 
+// Suurin sallittu nukkumisaika hiljaisena
+// aikataulujaksona. Laitteiston rajoihin perustuva, tasatuntiin
+// pyöristetty. Arvo on sekunteja (3 h).
+// Lähde: Marcel Stör - Max deep sleep for ESP8266. Viitattu 22.9.2019.
+// https://thingpulse.com/max-deep-sleep-for-esp8266/
+#define MAX_SLEEP 10800
+
 // Langattoman verkon lähetysteho (dBm), 0-20.5.
 #define WIFI_POWER 7
 
@@ -260,9 +267,61 @@ void setup()
         }
     }
 
+    int sleepSec;
+    if (nRows > 0)
+    {
+        uint8_t mac[6];
+        WiFi.macAddress(mac);
+        int runSec = (int) (millis() / 1000);
+        // Pyritään siihen, että näytön päivitysten väli on noin
+        // SLEEP_SECONDS sekuntia.
+        sleepSec = max(0, SLEEP_SECONDS - runSec);
+        // Jos seuraavan bussin lähtöön on pitkä aika, viivytetään
+        // seuraava ajo tapahtuvaksi keskimäärin noin 1.5 *
+        // SLEEP_SECONDS sekuntia ennen kyseistä lähtöä, mutta
+        // satunnaistetaan kerroin välille 1.3 -- 1.7
+        time_t tNow = UTC.now();
+        randomSeed((unsigned long) tNow +
+                   mac[0] + mac[1] + mac[2] + mac[3] + mac[4] + mac[5]);
+        long wakeGap = random(1.3 * SLEEP_SECONDS, 1.7 * SLEEP_SECONDS + 1);
+        time_t wakeUp = timeStamp[0] - (time_t) wakeGap;
+        if (wakeUp > tNow + sleepSec)
+        {
+            sleepSec = min(MAX_SLEEP, (int) (wakeUp - tNow));
+            time_t trueWakeUp = tNow + (time_t) sleepSec;
+            localHours = Finland.hour(trueWakeUp, UTC_TIME);
+            localMinutes = Finland.minute(trueWakeUp, UTC_TIME);
+            formatTime(clockHhMm, localHours, localMinutes);
+            Serial.print("Sleeping until ");
+            Serial.print(clockHhMm);
+            Serial.print(", ");
+            if (sleepSec == MAX_SLEEP)
+            {
+                Serial.print("max sleep ");
+                Serial.print(MAX_SLEEP);
+                Serial.println(" seconds");
+            }
+            else
+            {
+                Serial.print(wakeGap);
+                Serial.println(" seconds before next departure");
+            }
+        }
+    }
+    else
+    {
+        // Jos ei busseja (virhe), kokeillaan pian uudestaan
+        sleepSec = 90;
+    }
+
     // Komennetaan ESP8266 syväunitilaan.
-    // Herättyään koodi suoritetaan setup()-funktion alusta
-    ESP.deepSleep(SLEEP_SECONDS * 1000000);
+    // Herättyään koodi suoritetaan setup()-funktion alusta.
+    // Tässä voi myös ottaa huomioon mikrokontrollerin kellon systemaattisen
+    // virheen, esimerkiksi kertomalla ajan luvulla 1.0194, jos tarvitaan
+    // keskimäärin 1.94 % pidempi nukkumisaika. Korjauskertoimen saa selville
+    // esimerkiksi oman NTP-palvelimen lokista tarkkailemalla toteutuneiden
+    // aikapyyntöjen ajankohtia.
+    ESP.deepSleep((uint64_t) sleepSec * 1000000);
 }
 
 void loop() {
