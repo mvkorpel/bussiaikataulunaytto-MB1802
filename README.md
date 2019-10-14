@@ -28,3 +28,7 @@ Kotelon 3D-malleja voit tarkastella (ja muokata ottamalla itsellesi kopion) [OnS
 4. Ota Wemos D1 Mini kohdealustaksi valikosta **Tools > Board**
 5. Asenna tarvittavat kirjastot (ArduinoJson, ezTime, Adafruit GFX ja GxEPD) *Library Managerilla*. Sen löydät valikosta **Sketch > Include Library > Manage Libraries...**
 6. Muokkaa koodia (ainakin Wifi-tunnuksesi!) ja ohjelmoi se Wemokseen upload-nappia painamalla!
+
+## Esimerkkinäkymä e-paperinäytöllä
+
+![Aikataulu näyttää tältä](https://github.com/mvkorpel/bussiaikataulunaytto-MB1802/raw/master/epaperi.png)
