@@ -192,16 +192,6 @@ void setup()
     // otetaan referenssi JSON-muotoisen vastauksen bussilähdöistä 'departures'
     JsonArray departures = root["data"]["stops"][0]["stoptimesWithoutPatterns"];
 
-    // Hyödylliset rivit debuggaukseen:
-    // if (!root.success()) {
-    //      Serial.println("Parsing failed");
-    // }
-
-    // Alustetaan E-paperinäyttö
-    display.init();
-    display.setTextColor(GxEPD_BLACK);
-    display.setFont(&FreeMono9pt7b);
-
     int departureTime;
     time_t timeStamp[16];
     bool realTime[16];
