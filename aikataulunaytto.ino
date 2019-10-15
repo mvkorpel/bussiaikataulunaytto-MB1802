@@ -40,6 +40,12 @@ GxEPD_Class display(io);
 // rivivälejä suurempi rako.
 #define CLOCK_MARGIN 0
 
+// Bussilähtöjä ennen karsintaa enimmillään: 16 + 26 = 42
+#define MAX_DEPART 42
+
+// Näytölle mahtuvien aikataulurivien määrä
+#define MAX_DISP 16
+
 // HSL:n pysäkki-id:t voi hakea menemällä osoitteeseen
 // https://www.hsl.fi/reitit-ja-aikataulut,
 // kirjoittamalla pysäkkihakuun pysäkin nimen, ja
@@ -50,18 +56,28 @@ GxEPD_Class display(io);
 // samasta rajapinnasta käyttämällä linkistä
 // https://goo.gl/cwAC1H löytyvää kyselyä.
 
-// GraphQL-pyyntö Digitransitin rajapintaan. Kokeile rajapintaa täällä: goo.gl/cwAC1H
-static const char digitransitQuery[] PROGMEM = "{\"query\":\"{stops(ids:[\\\"HSL:2215255\\\"]){stoptimesWithoutPatterns(numberOfDepartures:16){realtimeDeparture,realtime,serviceDay,trip{route{shortName}}}}}\"}";
+// GraphQL-pyyntö Digitransitin rajapintaan. Kokeile rajapintaa
+// täällä: goo.gl/cwAC1H. Tällä haulla saa 16 seuraavaa lähtöä
+// pysäkiltä E2069 sekä 26 seuraavaa lähtöä pysäkiltä E2053.
+static const char digitransitQuery[] PROGMEM = "{\"query\":\"{"
+  "E2069:stops(ids:[\\\"HSL:2215255\\\"]){stoptimesWithoutPatterns("
+  "numberOfDepartures:16){"
+  "realtimeDeparture,realtime,serviceDay,trip{route{shortName}}}},"
+  "E2053:stops(ids:[\\\"HSL:2215222\\\"]){stoptimesWithoutPatterns("
+  "numberOfDepartures:26){"
+  "realtimeDeparture,realtime,serviceDay,trip{route{shortName}}}}}\"}";
 
 // ArduinoJSON-puskurin koko. Ks. https://arduinojson.org/assistant/
 // Puskurin on oltava suurempi kuin oletettu JSON-vastaus
-// rajapinnasta. Alla olevalla laskutoimituksella saadaan 3056 tavua.
-// Tilaa on varattu reilusti.
+// rajapinnasta. Alla olevalla laskutoimituksella saadaan 7926 tavua
+// (7928 neljällä jaollisena). Tilaa on varattu reilusti.
 // Linjanumeroiden vaatima tila on arvioitu yläkanttiin: viisi merkkiä
 // jokaiselle. Merkkijonojen kopiointiin varattu tila on assistentin
 // (ArduinoJson 6) ilmoittamista luvuista suurempi, esimerkkikoodista
-// "Parsing program" otettu 1200; pienempi luku on 1076.
-const size_t bufferSize = JSON_ARRAY_SIZE(1) + JSON_ARRAY_SIZE(16) + 35 * JSON_OBJECT_SIZE(1) + 16 * JSON_OBJECT_SIZE(4) + 1200;
+// "Parsing program" otettu 3110; pienempi luku on 2797.
+const size_t bufferSize = 2 * JSON_ARRAY_SIZE(1) + JSON_ARRAY_SIZE(16) +
+    JSON_ARRAY_SIZE(26) + 87 * JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(2) +
+    42 * JSON_OBJECT_SIZE(4) + 3110;
 
 // Kirjoittaa "hh:mm"-muotoisen, annettua aikaa esittävän merkkijonon
 // taulukkoon 'x'. Merkeistä ':' ja lopun '\0' ovat jo valmiiksi
@@ -107,6 +123,41 @@ void printTimetableRow(const char *busName, const char *departure, bool isRealti
     }
     display.setCursor(66, TOP_MARGIN + idx * LINE_HEIGHT);
     display.print(departure);
+}
+
+// Järjestää kaksi valmiiksi pienimmästä suurimpaan järjestettyä
+// kellonaikataulukkoa yhdeksi kokonaan järjestetyksi taulukoksi.
+// Syötteenä tulee olla taulukko 'x', jossa on 'n' alkiota.  Molemmat
+// syötetaulukot ovat 'x':n osia: ensimmäinen on 'x':n alussa ja
+// toinen alkaa kohdasta 'x[idxTwo]'. Tulos kirjoitetaan valmiiksi
+// allokoituun taulukkoon 'order' siten, että x[order[k]] on (k+1):s
+// aika aiemmasta myöhempään. 'nOrder' on luku <= 'n', joka ilmaisee,
+// kuinka monta aikaa, varhaisimmasta alkaen, halutaan selvittää. Siis
+// 'order' taulukkoon tulee 'nOrder' käyttökelpoista lukua.
+void interleaveTwo(const time_t *x, int n, int idxTwo, int *order, int nOrder)
+{
+    int atOne = 0;
+    int atTwo = idxTwo;
+    int k;
+    for (k = 0; k < nOrder; k++)
+    {
+        if (atOne >= idxTwo)
+        {
+            order[k] = atTwo++;
+        }
+        else if (atTwo >= n)
+        {
+            order[k] = atOne++; 
+        }
+        else if (x[atOne] <= x[atTwo])
+        {
+            order[k] = atOne++;
+        }
+        else
+        {
+            order[k] = atTwo++;
+        }
+    }
 }
 
 void setup()
@@ -189,21 +240,26 @@ void setup()
     DeserializationError err = deserializeJson(jsonDoc, payload.c_str());
     JsonObject root = jsonDoc.as<JsonObject>();
 
-    // otetaan referenssi JSON-muotoisen vastauksen bussilähdöistä 'departures'
-    JsonArray departures = root["data"]["stops"][0]["stoptimesWithoutPatterns"];
+    // Otetaan referenssit JSON-muotoisen vastauksen bussilähdöistä:
+    JsonObject busData = root["data"];
+    // 1: pysäkki E2069
+    JsonArray departures1 = busData["E2069"][0]["stoptimesWithoutPatterns"];
+    // 2: pysäkki E2053
+    JsonArray departures2 = busData["E2053"][0]["stoptimesWithoutPatterns"];
 
     int departureTime;
-    time_t timeStamp[16];
-    bool realTime[16];
-    const char *busName[16];
-    int k, nRows;
+    int departureOrder[MAX_DISP];
+    time_t timeStamp[MAX_DEPART];
+    bool realTime[MAX_DEPART];
+    const char *busName[MAX_DEPART];
+    int k, idx2, nRows;
     uint8_t localHours, localMinutes;
     char clockHhMm[6];
     clockHhMm[2] = ':';
     clockHhMm[5] = '\0';
     // Tallennetaan tiedot kaikista lähdöistä
     int idx = 0;
-    for (JsonObject dep : departures)
+    for (JsonObject dep : departures1)
     {
         // Lähtöaika (sekunteja vuorokauden alusta). Tämä ei käänny
         // suoraan kellonajaksi päivinä, jolloin kelloa siirretään.
@@ -216,7 +272,24 @@ void setup()
         busName[idx] = dep["trip"]["route"]["shortName"]; // Bussin reittinumero
         idx++;
     }
-    nRows = idx;
+    // Tallennetaan tiedot mahdollisista linjan 111 lähdöistä
+    // pysäkiltä E2053
+    idx2 = idx;
+    for (JsonObject dep : departures2)
+    {
+        const char *thisName = dep["trip"]["route"]["shortName"];
+        if ((strlen(thisName) == 3 && strncmp(thisName, "111",  3) == 0))
+        {
+            departureTime = dep["realtimeDeparture"];
+            timeStamp[idx] = ((time_t) dep["serviceDay"]) + departureTime;
+            realTime[idx] = dep["realtime"];
+            busName[idx] = thisName;
+            idx++;
+        }
+    }
+    // Lajitellaan lähdöt aikajärjestykseen
+    nRows = min(MAX_DISP, idx);
+    interleaveTwo(timeStamp, idx, idx2, departureOrder, nRows);
 
     localHours = Finland.hour(queryTime, UTC_TIME);
     localMinutes = Finland.minute(queryTime, UTC_TIME);
@@ -235,12 +308,13 @@ void setup()
         // piirretään e-paperinäytön puskuriin.  Aloitetaan kakkosriviltä.
         for (k = 0; k < nRows; k++)
         {
+            idx2 = departureOrder[k];
             // Parsittu lähtöaika
-            localHours = Finland.hour(timeStamp[k], UTC_TIME);
-            localMinutes = Finland.minute(timeStamp[k], UTC_TIME);
+            localHours = Finland.hour(timeStamp[idx2], UTC_TIME);
+            localMinutes = Finland.minute(timeStamp[idx2], UTC_TIME);
             formatTime(clockHhMm, localHours, localMinutes);
             // Tulostetaan rivi näytölle oikeaan kohtaan
-            printTimetableRow(busName[k], clockHhMm, realTime[k], k + 2);
+            printTimetableRow(busName[idx2], clockHhMm, realTime[idx2], k + 2);
         }
         display.update(); // Piirrä näyttöpuskurin sisältö E-paperinäytölle
     }
@@ -274,7 +348,7 @@ void setup()
         randomSeed((unsigned long) tNow +
                    mac[0] + mac[1] + mac[2] + mac[3] + mac[4] + mac[5]);
         long wakeGap = random(1.3 * SLEEP_SECONDS, 1.7 * SLEEP_SECONDS + 1);
-        time_t wakeUp = timeStamp[0] - (time_t) wakeGap;
+        time_t wakeUp = timeStamp[departureOrder[0]] - (time_t) wakeGap;
         if (wakeUp > tNow + sleepSec)
         {
             sleepSec = min(MAX_SLEEP, (int) (wakeUp - tNow));
