@@ -203,7 +203,7 @@ void setup()
     clockHhMm[5] = '\0';
     // Tallennetaan tiedot kaikista lähdöistä
     int idx = 0;
-    for (auto dep : departures)
+    for (JsonObject dep : departures)
     {
         // Lähtöaika (sekunteja vuorokauden alusta). Tämä ei käänny
         // suoraan kellonajaksi päivinä, jolloin kelloa siirretään.
