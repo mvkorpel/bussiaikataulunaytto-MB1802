@@ -56,11 +56,9 @@ String parseTime(int seconds) {
     /* Funktio parsii Digitransitin sekuntimuotoisesta lähtöajasta
        merkkijonon. Esimerkiksi 78840 -> "21:54" 
     */
-    int hours = seconds / 3600;
+    int hours = (seconds / 3600) % 24;
     int minutes = (seconds % 3600) / 60;
     char buffer[6];
-    if (hours == 25)
-        hours = 0;
     sprintf(buffer, "%02d:%02d", hours, minutes);
     return buffer;
 }
