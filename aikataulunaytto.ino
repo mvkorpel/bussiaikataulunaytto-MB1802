@@ -205,8 +205,7 @@ void setup()
     int idx = 0;
     for (JsonObject dep : departures)
     {
-        // Lähtöaika (sekunteja vuorokauden alusta). Tämä ei käänny
-        // suoraan kellonajaksi päivinä, jolloin kelloa siirretään.
+        // Lähtöaika (sekunteja vuorokauden alusta)
         departureTime = dep["realtimeDeparture"];
         // Lasketaan lähtöaika Unix-aikaleimana
         timeStamp[idx] = (time_t) dep["serviceDay"] + departureTime;
