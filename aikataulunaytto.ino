@@ -18,6 +18,14 @@ GxEPD_Class display(io);
 // Määritä nukkumisen kesto, oletuksena 900 s eli 15 min
 #define SLEEP_SECONDS 900
 
+// Kerroin sekunneista mikrosekunneiksi. Tässä voi myös ottaa huomioon
+// mikrokontrollerin kellon systemaattisen virheen, esimerkiksi
+// kertomalla tämän vakion luvulla 1.0194, jos tarvitaan keskimäärin
+// 1.94 % pidempi nukkumisaika. Sopivan korjauskertoimen saa selville
+// esimerkiksi oman NTP-palvelimen lokista tarkkailemalla
+// toteutuneiden aikapyyntöjen ajankohtia.
+#define SCALE_MICROSEC 1000000
+
 // Suurin sallittu nukkumisaika hiljaisena
 // aikataulujaksona. Laitteiston rajoihin perustuva, tasatuntiin
 // pyöristetty. Arvo on sekunteja (3 h).
@@ -160,6 +168,14 @@ void interleaveTwo(const time_t *x, int n, int idxTwo, int *order, int nOrder)
     }
 }
 
+void wifiOff()
+{
+    WiFi.disconnect();
+    WiFi.mode(WIFI_OFF);
+    WiFi.forceSleepBegin();
+    yield();
+}
+
 void setup()
 {
     Serial.begin(115200);
@@ -202,7 +218,14 @@ void setup()
     // seuraavan rivin kommenttimerkit ja asettaa NTP-palvelimelle
     // oikean nimen.
     //setServer("oma_palvelin");
-    waitForSync();
+    // waitForSync hyväksyy argumenttina aikarajan (sekunteja)
+    if (!waitForSync(30))
+    {
+        // Jos kellon tarkistus epäonnistuu, mennään syvään uneen
+        Serial.println("NTP sync failed");
+        wifiOff();
+        ESP.deepSleep(60 * SCALE_MICROSEC);
+    }
 
     // Aikavyöhykkeen ominaisuudet haetaan mikrokontrollerin pysyvästä
     // muistista. Jos tieto kuitenkin on vanhaa, aikavyöhykedata
@@ -211,8 +234,16 @@ void setup()
     if (!Finland.setCache(0))
     {
         Serial.println("getting TZ info");
-        Finland.setLocation("Europe/Helsinki");
+        if (!Finland.setLocation("Europe/Helsinki"))
+        {
+            // Jos aikavyöhykkeen haku epäonnistuu, mennään syvään uneen
+            Serial.println("TZ lookup failed");
+            wifiOff();
+            ESP.deepSleep(90 * SCALE_MICROSEC);
+        }
     }
+    Serial.print("time zone is ");
+    Serial.println(Finland.getTimezoneName());
 
     /* Seuraavilla riveillä luodaan ja lähetetään HTTP-pyyntö Digitransitin rajapintaan */
 
@@ -230,10 +261,7 @@ void setup()
     http.end();
 
     // WiFi pois päältä
-    WiFi.disconnect();
-    WiFi.mode(WIFI_OFF);
-    WiFi.forceSleepBegin();
-    yield();
+    wifiOff();
 
     // Parsitaan vastaus helpomminkäsiteltävään muotoon
     DynamicJsonDocument jsonDoc(bufferSize);
@@ -379,12 +407,7 @@ void setup()
 
     // Komennetaan ESP8266 syväunitilaan.
     // Herättyään koodi suoritetaan setup()-funktion alusta.
-    // Tässä voi myös ottaa huomioon mikrokontrollerin kellon systemaattisen
-    // virheen, esimerkiksi kertomalla ajan luvulla 1.0194, jos tarvitaan
-    // keskimäärin 1.94 % pidempi nukkumisaika. Korjauskertoimen saa selville
-    // esimerkiksi oman NTP-palvelimen lokista tarkkailemalla toteutuneiden
-    // aikapyyntöjen ajankohtia.
-    ESP.deepSleep((uint64_t) sleepSec * 1000000);
+    ESP.deepSleep((uint64_t) sleepSec * SCALE_MICROSEC);
 }
 
 void loop() {
