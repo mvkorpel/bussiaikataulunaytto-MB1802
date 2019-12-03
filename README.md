@@ -32,3 +32,15 @@ Kotelon 3D-malleja voit tarkastella (ja muokata ottamalla itsellesi kopion) [OnS
 ## Esimerkkinäkymä e-paperinäytöllä
 
 ![Aikataulu näyttää tältä](https://github.com/mvkorpel/bussiaikataulunaytto-MB1802/raw/master/epaperi.png)
+
+## Latausvirran rajoitus sopivaksi
+
+Rakennusohjeessa kehotetaan käyttämään noin 500 mAh:n akkua. Esimerkkituotteena mainitun Hubsan-akun (520 mAh) ohjeissa kerrotaan, ettei akkua saa ladata yli 1 C:n<sup id="a1">[1](#f1),</sup><sup id="a2"> [2](#f2)</sup> eli 520 mA:n virralla. Kuitenkin latauspiirikortti antaa vakiona 1000 mA virtaa. Laturia olisi siis syytä rajoittaa. Ei hätää: TP4056-latauspiiri on konfiguroitavissa yhtä piirikortin vastusta vaihtamalla<sup id="a3">[3](#f3)</sup>.
+
+Seuraava kuva kertoo konfigurointivastuksen (Rprog) vaikutuksen latausvirtaan (Ibat). Piirin valmistajan ilmoittamiin säätöarvoihin (mustat pisteet) on sovitettu malli, jossa on kaksi komponenttia: vakio ja virran käänteinen riippuvuus vastuksesta. Mallin sopivuus näyttää hyvältä. Esimerkkitapauksena (punainen tähti) on noin 440 mA:n virta vastuksen arvolla 2,7 kΩ.
+
+![Vastuksen vaikutus latausvirtaan](https://github.com/mvkorpel/bussiaikataulunaytto-MB1802/raw/master/tp4056.png)
+
+<strong id="f1">1.</strong> [↑](#a1) [<em>A Guide to Understanding Battery Specifications</em>](https://web.mit.edu/evt/summary_battery_specifications.pdf). MIT Electric Vehicle Team. Haettu 3.12.2019.  
+<strong id="f2">2.</strong> [↑](#a2) Battery charger: C-rate. (23.09 UTC, 19.11.2019). <em>Wikipedia</em>. Haettu 3.12.2019 osoitteesta <https://en.wikipedia.org/wiki/Battery_charger#C-rate>.  
+<strong id="f3">3.</strong> [↑](#a3) [<em>TP4056 1A Standalone Linear Li-lon Battery Charger with Thermal Regulation in SOP-8</em>](http://www.tp4056.com/d/tp4056.html). NanJing Top Power ASIC Corp. Haettu 3.12.2019.
