@@ -43,4 +43,4 @@ Seuraava kuva kertoo konfigurointivastuksen (Rprog) vaikutuksen latausvirtaan (I
 
 <strong id="f1">1.</strong> [↑](#a1) [<em>A Guide to Understanding Battery Specifications</em>](https://web.mit.edu/evt/summary_battery_specifications.pdf). MIT Electric Vehicle Team. Haettu 3.12.2019.  
 <strong id="f2">2.</strong> [↑](#a2) Battery charger: C-rate. (23.09 UTC, 19.11.2019). <em>Wikipedia</em>. Haettu 3.12.2019 osoitteesta <https://en.wikipedia.org/wiki/Battery_charger#C-rate>.  
-<strong id="f3">3.</strong> [↑](#a3) [<em>TP4056 1A Standalone Linear Li-lon Battery Charger with Thermal Regulation in SOP-8</em>](http://www.tp4056.com/d/tp4056.html). NanJing Top Power ASIC Corp. Haettu 3.12.2019.
+<strong id="f3">3.</strong> [↑](#a3) [<em>TP4056 1A Standalone Linear Li-lon (sic) Battery Charger with Thermal Regulation in SOP-8</em>](http://www.tp4056.com/d/tp4056.html). NanJing Top Power ASIC Corp. Haettu 4.12.2019.
