@@ -39,9 +39,13 @@ Rakennusohjeessa kehotetaan käyttämään noin 500 mAh:n akkua. Esimerkkituotte
 
 ![Latauspiirikortti](https://github.com/mvkorpel/bussiaikataulunaytto-MB1802/raw/master/hw107_hd.jpg)
 
-Seuraava kuva kertoo konfigurointivastuksen (Rprog, yllä kuvassa R3) vaikutuksen latausvirtaan (Ibat). Piirin valmistajan ilmoittamiin säätöarvoihin (mustat pisteet) on sovitettu malli, jossa on kaksi komponenttia: vakio ja virran käänteinen riippuvuus vastuksesta. Mallin sopivuus näyttää hyvältä. Esimerkkitapauksena (punainen tähti) on noin 440 mA:n virta vastuksen arvolla 2,7 kΩ.
+Seuraava kuva kertoo konfigurointivastuksen (Rprog, yllä kuvassa R3) vaikutuksen latausvirtaan (Ibat). Piirin valmistajan (katso [TC4056A](#tc4056a)) ilmoittamiin säätöarvoihin (mustat pisteet) on sovitettu malli, jossa on kaksi komponenttia: vakio ja virran käänteinen riippuvuus vastuksesta. Mallin sopivuus näyttää hyvältä. Esimerkkitapauksena (punainen tähti) on noin 440 mA:n virta vastuksen arvolla 2,7 kΩ.
 
 ![Vastuksen vaikutus latausvirtaan](https://github.com/mvkorpel/bussiaikataulunaytto-MB1802/raw/master/tp4056.png)
+
+## TC4056A
+
+Latauspiirikortin kuvasta huomataan, että pääpiirin malli onkin TC4056A eikä TP4056, jollaisena sitä myydään kiinalaisessa nettikaupassa. TC4056A-piirin valmistaja saattaa googlailun perusteella olla AMS, Fuman Electronics, tai ihan joku muu. Piirin mallinumeroa hakukoneessa käyttämällä löytyy erinäisiä dokumentteja, jotka tukevat tulkintaa, että kyseessä olisi TP4056:n lailla toimiva klooni.
 
 <strong id="f1">1.</strong> [↑](#a1) [<em>A Guide to Understanding Battery Specifications</em>](https://web.mit.edu/evt/summary_battery_specifications.pdf). MIT Electric Vehicle Team. Haettu 3.12.2019.  
 <strong id="f2">2.</strong> [↑](#a2) Battery charger: C-rate. (23.09 UTC, 19.11.2019). <em>Wikipedia</em>. Haettu 3.12.2019 osoitteesta <https://en.wikipedia.org/wiki/Battery_charger#C-rate>.  
