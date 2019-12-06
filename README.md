@@ -35,12 +35,15 @@ Kotelon 3D-malleja voit tarkastella (ja muokata ottamalla itsellesi kopion) [OnS
 
 ## Latausvirran rajoitus sopivaksi
 
-Rakennusohjeessa kehotetaan käyttämään noin 500 mAh:n akkua. Esimerkkituotteena mainitun Hubsan-akun (520 mAh) ohjeissa kerrotaan, ettei akkua saa ladata yli 1 C:n<sup id="a1">[1](#f1),</sup><sup id="a2"> [2](#f2)</sup> eli 520 mA:n virralla. Kuitenkin latauspiirikortti antaa vakiona 1000 mA virtaa. Laturia olisi siis syytä rajoittaa. Ei hätää: TP4056-latauspiiri on konfiguroitavissa yhtä piirikortin vastusta vaihtamalla<sup id="a3">[3](#f3)</sup>.
+Rakennusohjeessa kehotetaan käyttämään noin 500 mAh:n akkua. Esimerkkituotteena mainitun Hubsan-akun (520 mAh) ohjeissa kerrotaan, ettei akkua saa ladata yli 1 C:n<sup id="a1">[1](#f1),</sup><sup id="a2"> [2](#f2)</sup> eli 520 mA:n virralla. Ohjeessa käytetty latauspiirikortti kuitenkin antaa vakiona 1000 mA virtaa. Laturia olisi siis syytä rajoittaa. Ei hätää: TP4056-latauspiiri on konfiguroitavissa yhtä piirikortin vastusta vaihtamalla<sup id="a3">[3](#f3)</sup>. Seuraavan kuvan etualalla, merkinnällä R3, näkyy alkuperäinen 1,2 kΩ:n vastus. Vastus on mitoiltaan<sup id="a4">[4](#f4)</sup> tuumakokona ehkä 0603, mutta 0805 (noin 2,0 x 1,25 mm) sopii sen paikalle myös hyvin.
 
-Seuraava kuva kertoo konfigurointivastuksen (Rprog) vaikutuksen latausvirtaan (Ibat). Piirin valmistajan ilmoittamiin säätöarvoihin (mustat pisteet) on sovitettu malli, jossa on kaksi komponenttia: vakio ja virran käänteinen riippuvuus vastuksesta. Mallin sopivuus näyttää hyvältä. Esimerkkitapauksena (punainen tähti) on noin 440 mA:n virta vastuksen arvolla 2,7 kΩ.
+![Latauspiirikortti](https://github.com/mvkorpel/bussiaikataulunaytto-MB1802/raw/master/hw107_hd.jpg)
+
+Seuraava kuva kertoo konfigurointivastuksen (Rprog, yllä kuvassa R3) vaikutuksen latausvirtaan (Ibat). Piirin valmistajan ilmoittamiin säätöarvoihin (mustat pisteet) on sovitettu malli, jossa on kaksi komponenttia: vakio ja virran käänteinen riippuvuus vastuksesta. Mallin sopivuus näyttää hyvältä. Esimerkkitapauksena (punainen tähti) on noin 440 mA:n virta vastuksen arvolla 2,7 kΩ.
 
 ![Vastuksen vaikutus latausvirtaan](https://github.com/mvkorpel/bussiaikataulunaytto-MB1802/raw/master/tp4056.png)
 
 <strong id="f1">1.</strong> [↑](#a1) [<em>A Guide to Understanding Battery Specifications</em>](https://web.mit.edu/evt/summary_battery_specifications.pdf). MIT Electric Vehicle Team. Haettu 3.12.2019.  
 <strong id="f2">2.</strong> [↑](#a2) Battery charger: C-rate. (23.09 UTC, 19.11.2019). <em>Wikipedia</em>. Haettu 3.12.2019 osoitteesta <https://en.wikipedia.org/wiki/Battery_charger#C-rate>.  
-<strong id="f3">3.</strong> [↑](#a3) [<em>TP4056 1A Standalone Linear Li-lon (sic) Battery Charger with Thermal Regulation in SOP-8</em>](http://www.tp4056.com/d/tp4056.html). NanJing Top Power ASIC Corp. Haettu 4.12.2019.
+<strong id="f3">3.</strong> [↑](#a3) [<em>TP4056 1A Standalone Linear Li-lon (sic) Battery Charger with Thermal Regulation in SOP-8</em>](http://www.tp4056.com/d/tp4056.html). NanJing Top Power ASIC Corp. Haettu 4.12.2019.  
+<strong id="f4">4.</strong> [↑](#a4) Surface-mount technology: Two-terminal packages. (02.30 UTC, 6.12.2019). <em>Wikipedia</em>. Haettu 6.12.2019 osoitteesta <https://en.wikipedia.org/wiki/Surface-mount_technology#Two-terminal_packages>.
