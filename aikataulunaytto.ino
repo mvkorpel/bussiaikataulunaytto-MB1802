@@ -7,6 +7,7 @@
 #include <Fonts/FreeMono9pt7b.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
+#include <WiFiClient.h>
 #include <ArduinoJson.h>
 #include <time.h>
 #include <ezTime.h>
@@ -196,12 +197,13 @@ void setup()
 
     /* Seuraavilla riveillä luodaan ja lähetetään HTTP-pyyntö Digitransitin rajapintaan */
 
+    WiFiClient client;
     HTTPClient http; // Alustetaan HTTP-Client -instanssi
 
     // Huomaa kaksi vaihtoehtoista osoitetta Digitransitin rajapintoihin,
     // koko Suomen haku, ja HSL:n haku.
-    http.begin("http://api.digitransit.fi/routing/v1/routers/hsl/index/graphql"); // <- HSL
-    //http.begin("http://api.digitransit.fi/routing/v1/routers/finland/index/graphql"); // <- koko Suomi
+    http.begin(client, "http://api.digitransit.fi/routing/v1/routers/hsl/index/graphql"); // <- HSL
+    //http.begin(client, "http://api.digitransit.fi/routing/v1/routers/finland/index/graphql"); // <- koko Suomi
 
     http.addHeader("Content-Type", "application/json"); // Rajapinta vaatii pyynnön JSON-pakettina
     time_t queryTime = UTC.now();                       // Kyselyaika muistiin
