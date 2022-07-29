@@ -49,8 +49,8 @@ GxEPD_Class display(io);
 // rivivälejä suurempi rako.
 #define CLOCK_MARGIN 0
 
-// Bussilähtöjä ennen karsintaa enimmillään: 16 + 26 = 42
-#define MAX_DEPART 42
+// Bussilähtöjä ennen karsintaa enimmillään: 7 + 7 + 7
+#define MAX_DEPART 21
 
 // Näytölle mahtuvien aikataulurivien määrä
 #define MAX_DISP 16
@@ -66,27 +66,28 @@ GxEPD_Class display(io);
 // https://goo.gl/cwAC1H löytyvää kyselyä.
 
 // GraphQL-pyyntö Digitransitin rajapintaan. Kokeile rajapintaa
-// täällä: goo.gl/cwAC1H. Tällä haulla saa 16 seuraavaa lähtöä
-// pysäkiltä E2069 sekä 26 seuraavaa lähtöä pysäkiltä E2053.
+// täällä: goo.gl/cwAC1H. Tällä haulla saa 7 seuraavaa lähtöä
+// pysäkiltä V1606 sekä seuraavat lähdöt linjoittain pysäkeiltä
+// V1611 (Vaskivuori länteen) ja V1612 (Vaskivuori itään),
+// max 7 per pysäkki kullekin linjalle. Jälkimmäiset osakyselyt
+// tehdään 10 tunnin aikarajalla, kun vakiona aikaraja on
+// nykyhetki + 24 h.
 static const char digitransitQuery[] PROGMEM = "{\"query\":\"{"
-  "E2069:stops(ids:[\\\"HSL:2215255\\\"]){stoptimesWithoutPatterns("
-  "numberOfDepartures:16){"
+  "V1606:stops(ids:[\\\"HSL:4160206\\\"]){stoptimesWithoutPatterns("
+  "numberOfDepartures:7){"
   "realtimeDeparture,realtime,serviceDay,trip{route{shortName}}}},"
-  "E2053:stops(ids:[\\\"HSL:2215222\\\"]){stoptimesWithoutPatterns("
-  "numberOfDepartures:26){"
-  "realtimeDeparture,realtime,serviceDay,trip{route{shortName}}}}}\"}";
+  "V1611:stops(ids:[\\\"HSL:4160211\\\"]){stoptimesForPatterns("
+  "timeRange:36000,numberOfDepartures:7){pattern{id},stoptimes{"
+  "realtimeDeparture,realtime,serviceDay,trip{route{shortName}}}}},"
+  "V1612:stops(ids:[\\\"HSL:4160212\\\"]){stoptimesForPatterns("
+  "timeRange:36000,numberOfDepartures:7){pattern{id},stoptimes{"
+  "realtimeDeparture,realtime,serviceDay,trip{route{shortName}}}}}}\"}";
 
 // ArduinoJSON-puskurin koko. Ks. https://arduinojson.org/assistant/
 // Puskurin on oltava suurempi kuin oletettu JSON-vastaus
-// rajapinnasta. Alla olevalla laskutoimituksella saadaan 7926 tavua
-// (7928 neljällä jaollisena). Tilaa on varattu reilusti.
-// Linjanumeroiden vaatima tila on arvioitu yläkanttiin: viisi merkkiä
-// jokaiselle. Merkkijonojen kopiointiin varattu tila on assistentin
-// (ArduinoJson 6) ilmoittamista luvuista suurempi, esimerkkikoodista
-// "Parsing program" otettu 3110; pienempi luku on 2797.
-const size_t bufferSize = 2 * JSON_ARRAY_SIZE(1) + JSON_ARRAY_SIZE(16) +
-    JSON_ARRAY_SIZE(26) + 87 * JSON_OBJECT_SIZE(1) + JSON_OBJECT_SIZE(2) +
-    42 * JSON_OBJECT_SIZE(4) + 3110;
+// rajapinnasta. Varataan reilusti tilaa ja pyöristetään saatu
+// lukema ylöspäin kuten laskuri ehdottaa.
+const size_t bufferSize = 16384;
 
 // Kirjoittaa "hh:mm"-muotoisen, annettua aikaa esittävän merkkijonon
 // taulukkoon 'x'. Merkeistä ':' ja lopun '\0' ovat jo valmiiksi
@@ -162,6 +163,35 @@ void interleaveTwo(const time_t *x, int n, int idxTwo, int *order, int nOrder)
         else if (x[atOne] <= x[atTwo])
         {
             order[k] = atOne++;
+        }
+        else
+        {
+            order[k] = atTwo++;
+        }
+    }
+}
+
+// Kuin interleaveTwo, mutta tällä sijoitetaan kolmas järjestetty
+// taulukko interleaveTwo:n palauttaman järjestyksen ('preOrder')
+// joukkoon.
+void interleaveThree(const time_t *x, int n, int idxTwo, const int *preOrder, int *order, int nOrder)
+{
+    int atOne = 0;
+    int atTwo = idxTwo;
+    int k;
+    for (k = 0; k < nOrder; k++)
+    {
+        if (atOne >= idxTwo)
+        {
+            order[k] = atTwo++;
+        }
+        else if (atTwo >= n)
+        {
+            order[k] = preOrder[atOne++];
+        }
+        else if (x[preOrder[atOne]] <= x[atTwo])
+        {
+            order[k] = preOrder[atOne++];
         }
         else
         {
@@ -280,13 +310,83 @@ void setup()
 
     // Otetaan referenssit JSON-muotoisen vastauksen bussilähdöistä:
     JsonObject busData = root["data"];
-    // 1: pysäkki E2069
-    JsonArray departures1 = busData["E2069"][0]["stoptimesWithoutPatterns"];
-    // 2: pysäkki E2053
-    JsonArray departures2 = busData["E2053"][0]["stoptimesWithoutPatterns"];
+    // pysäkki V1606
+    JsonArray departures1 = busData["V1606"][0]["stoptimesWithoutPatterns"];
+    // poimitaan pysäkin V1611 reittien joukosta 560 Myyrmäkeen
+    JsonArray patterns2 = busData["V1611"][0]["stoptimesForPatterns"];
+    // poimitaan pysäkin V1612 reittien joukosta 560 Rastilaan
+    JsonArray patterns3 = busData["V1612"][0]["stoptimesForPatterns"];
+    // seuraavissa alkuarvoa ei käytetä
+    JsonArray departures2 = departures1;
+    JsonArray departures3 = departures1;
 
+    // Bussilinjojen (560 eri suuntiin) tunnukset on tallennettu
+    // rajanpintaan tehtyjen testikyselyiden antamista vastauksista.
+    // Vastauksesta kopioidaan koodiin "pattern"-otsikon alla oleva
+    // "id"-merkkijono. Sopivat kyselyt saat asettamalla soveltuvan
+    // pysäkkitunnuksen seuraavaan malliin.
+    // {
+    //   stops(ids: ["HSL:4160212"]) {
+    //     stoptimesForPatterns {
+    //       pattern {
+    //         id
+    //       }
+    //       stoptimes {
+    //         trip {
+    //           route {
+    //             shortName
+    //           }
+    //         }
+    //       }
+    //     }
+    //   }
+    // }
+    const char lineid2[] = "UGF0dGVybjpIU0w6NDU2MDowOjAy";
+    const char lineid3[] = "UGF0dGVybjpIU0w6NDU2MDoxOjAx";
+    // Runkolinjan eri suunnille asetetaan omat kirjaintunnukset
+    const char name2[] = "560M"; // (M)yyrmäkeen
+    const char name3[] = "560R"; // (R)astilaan
+
+    // tallennetaan tieto, onko valituilla linjoilla lähtöjä
+    bool dep2 = false;
+    bool dep3 = false;
+    for (JsonObject patt : patterns2)
+    {
+        const char *id = patt["pattern"]["id"];
+        if (dep2)
+        {
+            break;
+        }
+        else if (strcmp(id, lineid2) == 0)
+        {
+            departures2 = patt["stoptimes"];
+            dep2 = true;
+        }
+    }
+    for (JsonObject patt : patterns3)
+    {
+        const char *id = patt["pattern"]["id"];
+        if (dep3)
+        {
+            break;
+        }
+        else if (strcmp(id, lineid3) == 0)
+        {
+            departures3 = patt["stoptimes"];
+            dep3 = true;
+        }
+    }
+
+    // Hyödylliset rivit debuggaukseen:
+    // if (!root.success()) {
+    //      Serial.println("Parsing failed");
+    // }
+
+    // Käydään kaikki bussilähdöt yksitellen läpi.
+    int idx = 0;
     int departureTime;
     int departureOrder[MAX_DISP];
+    int departureOrder2[MAX_DISP];
     time_t timeStamp[MAX_DEPART];
     bool realTime[MAX_DEPART];
     const char *busName[MAX_DEPART];
@@ -295,8 +395,7 @@ void setup()
     char clockHhMm[6];
     clockHhMm[2] = ':';
     clockHhMm[5] = '\0';
-    // Tallennetaan tiedot kaikista lähdöistä
-    int idx = 0;
+    // Tallennetaan tiedot "peruspysäkin" lähdöistä
     for (JsonObject dep : departures1)
     {
         // Lähtöaika (sekunteja vuorokauden alusta). Tämä ei käänny
@@ -313,24 +412,55 @@ void setup()
         busName[idx] = dep["trip"]["route"]["shortName"];
         idx++;
     }
-    // Tallennetaan tiedot mahdollisista linjan 111 lähdöistä
-    // pysäkiltä E2053
-    idx2 = idx;
-    for (JsonObject dep : departures2)
+    // Tallennetaan tiedot lineid2-tunnuksisen linjan lähdöistä
+    if (dep2)
     {
-        const char *thisName = dep["trip"]["route"]["shortName"];
-        if ((strlen(thisName) == 3 && strncmp(thisName, "111",  3) == 0))
+        idx2 = idx;
+        for (JsonObject dep : departures2)
         {
             departureTime = dep["realtimeDeparture"];
             timeStamp[idx] = ((time_t) dep["serviceDay"]) + departureTime;
             realTime[idx] = dep["realtime"];
-            busName[idx] = thisName;
+            busName[idx] = name2;
             idx++;
         }
+        nRows = min(MAX_DISP, idx);
+        // Lajitellaan departures1- ja departures2-lähdöt
+        // keskenään oikeaan aikajärjestykseen
+        interleaveTwo(timeStamp, idx, idx2, departureOrder, nRows);
     }
-    // Lajitellaan lähdöt aikajärjestykseen
-    nRows = min(MAX_DISP, idx);
-    interleaveTwo(timeStamp, idx, idx2, departureOrder, nRows);
+    else
+    {
+        for (k = 0; k < idx; k++)
+        {
+            departureOrder[k] = k;
+        }
+        nRows = idx;
+    }
+    // Tallennetaan tiedot lineid3-tunnuksisen linjan lähdöistä
+    if (dep3)
+    {
+        idx2 = idx;
+        for (JsonObject dep : departures3)
+        {
+            departureTime = dep["realtimeDeparture"];
+            timeStamp[idx] = ((time_t) dep["serviceDay"]) + departureTime;
+            realTime[idx] = dep["realtime"];
+            busName[idx] = name3;
+            idx++;
+        }
+        nRows = min(MAX_DISP, idx);
+        // Lajitellaan departures3-lähdöt mukaan jo aiemmin
+        // järjestettyihin departures1- ja departures2-lähtöihin
+        interleaveThree(timeStamp, idx, idx2, departureOrder, departureOrder2, nRows);
+    }
+    else
+    {
+        for (k = 0; k < nRows; k++)
+        {
+            departureOrder2[k] = departureOrder[k];
+        }
+    }
 
     localHours = Finland.hour(queryTime, UTC_TIME);
     localMinutes = Finland.minute(queryTime, UTC_TIME);
@@ -349,7 +479,7 @@ void setup()
         // piirretään e-paperinäytön puskuriin.  Aloitetaan kakkosriviltä.
         for (k = 0; k < nRows; k++)
         {
-            idx2 = departureOrder[k];
+            idx2 = departureOrder2[k];
             // Parsittu lähtöaika
             localHours = Finland.hour(timeStamp[idx2], UTC_TIME);
             localMinutes = Finland.minute(timeStamp[idx2], UTC_TIME);
