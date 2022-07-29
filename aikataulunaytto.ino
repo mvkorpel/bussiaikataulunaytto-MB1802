@@ -216,13 +216,13 @@ void setup()
     http.addHeader("Content-Type", "application/json"); // Rajapinta vaatii pyynnön JSON-pakettina
     time_t queryTime = UTC.now();                       // Kyselyaika muistiin
     int httpCode = http.POST(digitransitQuery);         // POST-muotoinen pyyntö
-    String payload = http.getString();                  // Otetaan Digitransitin lähettämä vastaus talteen muuttujaan 'payload'
+    String payload = http.getString();                  // Otetaan Digitransitin lähettämä vastaus talteen
     http.end();
 
     // WiFi pois päältä
     wifiOff();
 
-    // Parsitaan vastaus helpomminkäsiteltävään muotoon
+    // Parsitaan vastaus helpommin käsiteltävään muotoon
     DynamicJsonDocument jsonDoc(bufferSize);
     DeserializationError err = deserializeJson(jsonDoc, payload.c_str());
     JsonObject root = jsonDoc.as<JsonObject>();
