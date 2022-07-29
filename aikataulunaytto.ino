@@ -118,7 +118,8 @@ void printClockRow(const char *text)
     display.print(" =");
 }
 
-void printTimetableRow(const char *busName, const char *departure, bool isRealtime, int idx) {
+void printTimetableRow(const char *busName, const char *departure, bool isRealtime, int idx)
+{
     // Funktio tulostaa näytön puskuriin bussiaikataulurivin. Esim.
     // 110T ~21:34
     // Tilde näytetään, jos aika on otettu aikataulusta eli ei ole
@@ -212,12 +213,18 @@ void setup()
         delay(250);
     }
 
-    // Tarkistetaan kello. Kelloa käytetään aikavyöhykeasetusten
-    // riittävän tuoreuden toteamiseksi (välttämätöntä, kun
-    // aikavyöhyketietoa käytetään). Tiheäkään kyselyväli ei haittaa,
-    // jos käytetään omaa palvelinta, mitä varten voit poistaa
-    // seuraavan rivin kommenttimerkit ja asettaa NTP-palvelimelle
-    // oikean nimen.
+    // Tarkistetaan kello. Kelloa käytetään tässä ohjelmassa
+    // kolmella tavalla:
+    // 1. aikavyöhykeasetusten riittävän tuoreuden toteamiseksi
+    //    (välttämätöntä, kun aikavyöhyketietoa käytetään)
+    // 2. rajapintahaun kellonajan näyttämiseksi (hyödyllistä: auttaa
+    //    laitteen oikean toiminnan varmistamisessa, vaikkakin
+    //    aikataulurivien määrä laskee 17:stä 16:een)
+    // 3. laitteen pitkän nukkumisajan asettamiseksi hiljaisina
+    //    aikoina (hyödyllistä: auttaa säästämään akkua)
+    // Tiheäkään kyselyväli ei haittaa, kun käytetään omaa palvelinta,
+    // mitä varten voit poistaa seuraavan rivin kommenttimerkit ja
+    // asettaa NTP-palvelimelle oikean DNS-nimen.
     //setServer("oma_palvelin");
     // waitForSync hyväksyy argumenttina aikarajan (sekunteja)
     if (!waitForSync(30))
@@ -246,7 +253,8 @@ void setup()
     Serial.print("time zone is ");
     Serial.println(Finland.getTimezoneName());
 
-    /* Seuraavilla riveillä luodaan ja lähetetään HTTP-pyyntö Digitransitin rajapintaan */
+    // Seuraavilla riveillä luodaan ja lähetetään HTTP-pyyntö
+    // Digitransitin rajapintaan
 
     WiFiClient client;
     HTTPClient http; // Alustetaan HTTP-Client -instanssi
@@ -259,13 +267,13 @@ void setup()
     http.addHeader("Content-Type", "application/json"); // Rajapinta vaatii pyynnön JSON-pakettina
     time_t queryTime = UTC.now();                       // Kyselyaika muistiin
     int httpCode = http.POST(digitransitQuery);         // POST-muotoinen pyyntö
-    String payload = http.getString();                  // Otetaan Digitransitin lähettämä vastaus talteen muuttujaan 'payload'
+    String payload = http.getString();                  // Otetaan Digitransitin lähettämä vastaus talteen
     http.end();
 
     // WiFi pois päältä
     wifiOff();
 
-    // Parsitaan vastaus helpomminkäsiteltävään muotoon
+    // Parsitaan vastaus helpommin käsiteltävään muotoon
     DynamicJsonDocument jsonDoc(bufferSize);
     DeserializationError err = deserializeJson(jsonDoc, payload.c_str());
     JsonObject root = jsonDoc.as<JsonObject>();
@@ -412,7 +420,8 @@ void setup()
     ESP.deepSleep((uint64_t) sleepSec * SCALE_MICROSEC);
 }
 
-void loop() {
+void loop()
+{
     // loop() jätetään tyhjäksi, sillä deepsleepistä johtuen
     // koodin suoritus ei ikinä pääse tänne asti.
 }
