@@ -299,14 +299,18 @@ void setup()
     int idx = 0;
     for (JsonObject dep : departures1)
     {
-        // Lähtöaika (sekunteja vuorokauden alusta)
+        // Lähtöaika (sekunteja vuorokauden alusta). Tämä ei käänny
+        // suoraan kellonajaksi päivinä, jolloin kelloa siirretään.
         departureTime = dep["realtimeDeparture"];
-        // Lasketaan lähtöaika Unix-aikaleimana
-        timeStamp[idx] = (time_t) dep["serviceDay"] + departureTime;
+        // Lasketaan lähtöaika Unix-aikaleimana. Se toimii myös
+        // järjestämisessä paremmin kuin vuorokauden alusta laskettu
+        // aika, jossa on (ilmiselvästi) epäjatkuvuus vuorokauden
+        // vaihtuessa.
+        timeStamp[idx] = ((time_t) dep["serviceDay"]) + departureTime;
         // Onko lähtö tarkka (käyttääkö HSL:n GPS-seurantaa?)
         realTime[idx] = dep["realtime"];
         // Bussin reittinumero
-        busName[idx] = dep["trip"]["route"]["shortName"]; // Bussin reittinumero
+        busName[idx] = dep["trip"]["route"]["shortName"];
         idx++;
     }
     // Tallennetaan tiedot mahdollisista linjan 111 lähdöistä
