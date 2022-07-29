@@ -202,7 +202,8 @@ void setup()
     Serial.print("time zone is ");
     Serial.println(Finland.getTimezoneName());
 
-    /* Seuraavilla riveillä luodaan ja lähetetään HTTP-pyyntö Digitransitin rajapintaan */
+    // Seuraavilla riveillä luodaan ja lähetetään HTTP-pyyntö
+    // Digitransitin rajapintaan
 
     WiFiClient client;
     HTTPClient http; // Alustetaan HTTP-Client -instanssi
