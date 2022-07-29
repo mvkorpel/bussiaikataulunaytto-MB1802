@@ -102,7 +102,8 @@ void printClockRow(const char *text)
     display.print(" =");
 }
 
-void printTimetableRow(const char *busName, const char *departure, bool isRealtime, int idx) {
+void printTimetableRow(const char *busName, const char *departure, bool isRealtime, int idx)
+{
     // Funktio tulostaa näytön puskuriin bussiaikataulurivin. Esim.
     // 110T ~21:34
     // Tilde näytetään, jos aika on otettu aikataulusta eli ei ole
@@ -344,7 +345,8 @@ void setup()
     ESP.deepSleep((uint64_t) sleepSec * SCALE_MICROSEC);
 }
 
-void loop() {
+void loop()
+{
     // loop() jätetään tyhjäksi, sillä deepsleepistä johtuen
     // koodin suoritus ei ikinä pääse tänne asti.
 }
