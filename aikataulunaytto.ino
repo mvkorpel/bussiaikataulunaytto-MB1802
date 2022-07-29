@@ -161,12 +161,18 @@ void setup()
         delay(250);
     }
 
-    // Tarkistetaan kello. Kelloa käytetään aikavyöhykeasetusten
-    // riittävän tuoreuden toteamiseksi (välttämätöntä, kun
-    // aikavyöhyketietoa käytetään). Tiheäkään kyselyväli ei haittaa,
-    // jos käytetään omaa palvelinta, mitä varten voit poistaa
-    // seuraavan rivin kommenttimerkit ja asettaa NTP-palvelimelle
-    // oikean nimen.
+    // Tarkistetaan kello. Kelloa käytetään tässä ohjelmassa
+    // kolmella tavalla:
+    // 1. aikavyöhykeasetusten riittävän tuoreuden toteamiseksi
+    //    (välttämätöntä, kun aikavyöhyketietoa käytetään)
+    // 2. rajapintahaun kellonajan näyttämiseksi (hyödyllistä: auttaa
+    //    laitteen oikean toiminnan varmistamisessa, vaikkakin
+    //    aikataulurivien määrä laskee 17:stä 16:een)
+    // 3. laitteen pitkän nukkumisajan asettamiseksi hiljaisina
+    //    aikoina (hyödyllistä: auttaa säästämään akkua)
+    // Tiheäkään kyselyväli ei haittaa, kun käytetään omaa palvelinta,
+    // mitä varten voit poistaa seuraavan rivin kommenttimerkit ja
+    // asettaa NTP-palvelimelle oikean DNS-nimen.
     //setServer("oma_palvelin");
     // waitForSync hyväksyy argumenttina aikarajan (sekunteja)
     if (!waitForSync(30))
