@@ -519,7 +519,7 @@ void setup()
         randomSeed((unsigned long) tNow +
                    mac[0] + mac[1] + mac[2] + mac[3] + mac[4] + mac[5]);
         long wakeGap = random(1.3 * SLEEP_SECONDS, 1.7 * SLEEP_SECONDS + 1);
-        time_t wakeUp = timeStamp[departureOrder[0]] - (time_t) wakeGap;
+        time_t wakeUp = timeStamp[departureOrder2[0]] - (time_t) wakeGap;
         if (wakeUp > tNow + sleepSec)
         {
             sleepSec = min(MAX_SLEEP, (int) (wakeUp - tNow));
